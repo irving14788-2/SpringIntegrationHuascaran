@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:file="http://www.springframework.org/schema/integration/file"
+	xmlns:int-sftp="http://www.springframework.org/schema/integration/sftp"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration/sftp http://www.springframework.org/schema/integration/sftp/spring-integration-sftp.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+	<!--****************INICIO requestACBCCFChannel****************-->
+	<int:channel id="requestACBCCFChannel"></int:channel>
+
+	<file:inbound-channel-adapter id="channelAdapterACBCCF"
+		channel="requestACBCCFChannel" directory="${directorio.origen.telefonica.cifrados.ACBCCF}"
+		filename-pattern="${entrada.archivo.telefonica.ACBCCF}*.pgp">
+		<int:poller id="pollerPgp" fixed-rate="5000">
+		</int:poller>
+	</file:inbound-channel-adapter>
+
+	<int:aggregator input-channel="requestACBCCFChannel"
+		ref="fileHandlingService" method="aggregateFiles" output-channel="nullChannel">
+	</int:aggregator>
+
+
+	<!--****************INICIO requestCFBCCFChannel****************-->
+
+	<int:channel id="requestCFBCCFChannel"></int:channel>
+
+	<file:inbound-channel-adapter id="channelAdapterCFBCCF"
+		channel="requestCFBCCFChannel" directory="${directorio.origen.telefonica.cifrados.CFBCCF}"
+		filename-pattern="${entrada.archivo.telefonica.CFBCCF}*.pgp">
+		<int:poller id="pollerPgp" fixed-rate="5000">
+		</int:poller>
+	</file:inbound-channel-adapter>
+
+	<int:aggregator input-channel="requestCFBCCFChannel"
+		ref="fileHandlingService" method="aggregateFiles" output-channel="nullChannel">
+	</int:aggregator>
+
+
+	<!--****************INICIO requestCRBCCFChannel****************-->
+
+	<int:channel id="requestCRBCCFChannel"></int:channel>
+
+	<file:inbound-channel-adapter id="channelAdapterCRBCCF"
+		channel="requestCRBCCFChannel" directory="${directorio.origen.telefonica.cifrados.CRBCCF}"
+		filename-pattern="${entrada.archivo.telefonica.CRBCCF}*.pgp">
+		<int:poller id="pollerPgp" fixed-rate="5000">
+		</int:poller>
+	</file:inbound-channel-adapter>
+
+	<int:aggregator input-channel="requestCRBCCFChannel"
+		ref="fileHandlingService" method="aggregateFiles" output-channel="nullChannel">
+	</int:aggregator>
+	
+	
+	<!--****************INICIO requestRDBCCFChannel****************-->
+
+	<int:channel id="requestRDBCCFChannel"></int:channel>
+
+	<file:inbound-channel-adapter id="channelAdapterRDBCCF"
+		channel="requestRDBCCFChannel" directory="${directorio.origen.telefonica.cifrados.RDBCCF}"
+		filename-pattern="${entrada.archivo.telefonica.RDBCCF}*.pgp">
+		<int:poller id="pollerPgp" fixed-rate="5000">
+		</int:poller>
+	</file:inbound-channel-adapter>
+
+	<int:aggregator input-channel="requestRDBCCFChannel"
+		ref="fileHandlingService" method="aggregateFiles" output-channel="nullChannel">
+	</int:aggregator>
+
+</beans>
