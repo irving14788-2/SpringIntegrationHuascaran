@@ -22,6 +22,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.bouncycastle.openpgp.PGPException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.integration.annotation.CorrelationStrategy;
 import org.springframework.integration.annotation.ReleaseStrategy;
@@ -93,7 +95,7 @@ public class FileHandlingService {
         
     	Path folderDestino = Paths.get(destino);
         
-        File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE);
+        File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE_PRIVADA);
         String passwd = propertiesExterno.PASSWORD_LLAVE;
         List<String> lines = new ArrayList<>();
         
@@ -136,9 +138,18 @@ public class FileHandlingService {
    }
    
    
-   public String cifrarContrato(String... estado) throws IOException {
-	   	
-		return "OK";
+   public File cifrarContrato(File file) throws IOException {
+	   	String name = FilenameUtils.getBaseName(file.getName());
+	    File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE_PUBLICA);
+	    File fileCifrado = null;
+	    try {
+			KeyBasedFileProcessor.encryptFile(file.getAbsolutePath(), propertiesExterno.DIRECTORIO_TEMP_CIFRADO+name+".pgp", keyFileName.getAbsolutePath());
+			fileCifrado = new File(propertiesExterno.DIRECTORIO_TEMP_CIFRADO+name+".pgp");
+		} catch (NoSuchProviderException | PGPException e) {
+			e.printStackTrace();
+		}
+		return fileCifrado;
    }
+   
 	
 }

@@ -1,19 +1,26 @@
 package com.bbva.integration.util;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
 import java.util.Iterator;
 
+import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPCompressedData;
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPObjectFactory;
 import org.bouncycastle.openpgp.PGPOnePassSignatureList;
 import org.bouncycastle.openpgp.PGPPrivateKey;
+import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
 import org.bouncycastle.openpgp.PGPSecretKeyRingCollection;
 import org.bouncycastle.openpgp.PGPUtil;
@@ -110,5 +117,48 @@ public class KeyBasedFileProcessor {
 	    return rpta;
 	  }
 	  
+
+
+	  public static void encryptFile(String fileName, String outputFile, String encKeyFileName)
+	    throws IOException, NoSuchProviderException, PGPException
+	  {
+	    String provider = "BC";
+	    boolean armored = false;
+	    boolean withIntegrityPacket = false;
+	    int compLib = 1;
+	    int algorithm = 9;
+	    BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outputFile));
+	    PGPPublicKey localPGPPublicKey = Utils.readPublicKey(encKeyFileName);
+	    encryptFile(out, fileName, localPGPPublicKey, provider, armored, withIntegrityPacket, compLib, algorithm);
+	    out.close();
+	  }
+
+	  private static void encryptFile(OutputStream outputStream, String fileName, PGPPublicKey publicKey, String providerName, boolean armored, boolean withIntegrityPacket, int compressionLib, int algorithm)
+	    throws IOException, NoSuchProviderException
+	  {
+	    if (armored) {
+	      outputStream = new ArmoredOutputStream(outputStream);
+	    }
+	    try
+	    {
+	      byte[] arrayOfByte = Utils.compressFile(fileName, compressionLib);
+
+	      PGPEncryptedDataGenerator dataGenerator = new PGPEncryptedDataGenerator(9, withIntegrityPacket, new SecureRandom(), "BC");
+	      dataGenerator.addMethod(publicKey);
+	      OutputStream localOutputStream = dataGenerator.open(outputStream, arrayOfByte.length);
+	      localOutputStream.write(arrayOfByte);
+	      localOutputStream.close();
+	      if (armored) {
+	        outputStream.close();
+	      }
+
+	    }
+	    catch (PGPException localPGPException)
+	    {
+	      System.err.println(localPGPException);
+	      if (localPGPException.getUnderlyingException() != null)
+	        localPGPException.getUnderlyingException().printStackTrace();
+	    }
+	  }
 	  
 }

@@ -83,12 +83,18 @@ public class PropertiesExterno {
 	@Value( "${directorio.origen.host}" )
 	public String DIRECTORIO_ORIGEN_HOST;
 	
-	@Value( "${directorio.llave}" )
-	public String DIRECTORIO_LLAVE;
+	@Value( "${directorio.llave.privada}" )
+	public String DIRECTORIO_LLAVE_PRIVADA;
+	
+	@Value( "${directorio.llave.publica}" )
+	public String DIRECTORIO_LLAVE_PUBLICA;
 	
 	@Value( "${password.llave}" )
 	public String PASSWORD_LLAVE;
 	
+	@Value( "${directorio.temp.cifrado}" )
+	public String DIRECTORIO_TEMP_CIFRADO;
+		
 	@Value( "${leer.intervalo.minutos}" )
 	public int	LEER_INTERVLO_MINUTOS;
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
 	xmlns:file="http://www.springframework.org/schema/integration/file"
 	xmlns:int-sftp="http://www.springframework.org/schema/integration/sftp"
 	xmlns:int-http="http://www.springframework.org/schema/integration/http"
@@ -13,19 +14,34 @@
 		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
 
 	<int:channel id="inputChannel" />
+	
+	<int:channel id="primerChannel" />
+	<int:channel id="segundoChannel" />
+	
 	<int:channel id="contratoFUChannel" />
 	<int:channel id="contratoMailChannel" />
 	<int:channel id="contratoMailChannelResponse" />
 	<int:channel id="outputChannel" />
-
+	<int:channel id="cifradoChannel" />
+	
+	<int:channel id="channelAOBCCF" />
+	<int:channel id="channelCVBCCF" />
+	<int:channel id="channelFCBCCF" />
+	<int:channel id="channelLLCBCCF" />
+ 	
 	<file:inbound-channel-adapter channel="inputChannel"
-		directory="${directorio.origen.host}" filename-pattern="contratos*.txt">
+		directory="${directorio.origen.host}" filename-pattern="*.txt">
 		<int:poller id="pollerXml" fixed-rate="5000">
 		</int:poller>
 	</file:inbound-channel-adapter>
-
+	
+	<int:recipient-list-router input-channel="inputChannel">
+		<int:recipient channel="primerChannel"/>
+		<int:recipient channel="segundoChannel"/>
+	</int:recipient-list-router>
+	
 	<int:splitter id="splitter" ref="fileHandlingService"
-		method="splitContratos" input-channel="inputChannel" output-channel="contratoFUChannel" />
+		method="splitContratos" input-channel="primerChannel" output-channel="contratoFUChannel" />
 
 	<int:service-activator input-channel="contratoFUChannel"
 		ref="fileHandlingService" method="direccionarFileUnico"
@@ -37,10 +53,31 @@
 		http-method="POST" 
 		expected-response-type="java.lang.String" charset="UTF-8"/>
 	
-	<int:aggregator input-channel="contratoMailChannelResponse" output-channel="outputChannel"/>
+	<int:aggregator input-channel="contratoMailChannelResponse" output-channel="nullChannel"/>
 	
-	<int:service-activator input-channel="outputChannel"
+	<int:service-activator input-channel="segundoChannel"
 		ref="fileHandlingService" method="cifrarContrato"
-		output-channel="nullChannel" />
+		output-channel="cifradoChannel" />
+	
+	
+	<int:recipient-list-router input-channel="cifradoChannel">
+		<int:recipient channel="channelAOBCCF" selector-expression="payload.name.contains('${salida.archivo.telefonica.AOBCCF}')"/>
+		<int:recipient channel="channelCVBCCF" selector-expression="payload.name.contains('${salida.archivo.telefonica.CVBCCF}')"/>
+		<int:recipient channel="channelFCBCCF" selector-expression="payload.name.contains('${salida.archivo.telefonica.FCBCCF}')"/>
+		<int:recipient channel="channelLLCBCCF" selector-expression="payload.name.contains('${salida.archivo.telefonica.LLCBCCF}')"/>
+	</int:recipient-list-router>
+	
+	<file:outbound-channel-adapter id="filesOutAOBCCF" channel="channelAOBCCF"
+    directory="${directorio.destino.telefonica.cifrado.AOBCCF}" delete-source-files="true"/>
+    
+    <file:outbound-channel-adapter id="filesOutCVBCCF" channel="channelCVBCCF"
+    directory="${directorio.destino.telefonica.cifrado.CVBCCF}" delete-source-files="true"/>
+    
+    <file:outbound-channel-adapter id="filesOutFCBCCF" channel="channelFCBCCF"
+    directory="${directorio.destino.telefonica.cifrado.FCBCCF}" delete-source-files="true"/>
+    
+    <file:outbound-channel-adapter id="filesOutLLCBCCF" channel="channelLLCBCCF"
+    directory="${directorio.destino.telefonica.cifrado.LLCBCCF}" delete-source-files="true"/>
+
 	
 </beans>
