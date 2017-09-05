@@ -12,7 +12,7 @@
 
 	<!--****************INICIO requestACBCCFChannel****************-->
 	<int:channel id="requestACBCCFChannel"></int:channel>
-
+		
 	<file:inbound-channel-adapter id="channelAdapterACBCCF"
 		channel="requestACBCCFChannel" directory="${directorio.origen.telefonica.cifrados.ACBCCF}"
 		filename-pattern="${entrada.archivo.telefonica.ACBCCF}*.pgp">

@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.NoSuchProviderException;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -20,6 +21,8 @@ import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -41,7 +44,9 @@ import com.bbva.integration.util.PropertiesExterno;
 
 @Component
 public class FileHandlingService {
-
+	
+	 private static final Logger LOG = LoggerFactory.getLogger(FileHandlingService.class);
+	
 	@Autowired
 	PropertiesExterno propertiesExterno;
 	
@@ -90,6 +95,9 @@ public class FileHandlingService {
     
     
     public String aggregateFiles(List<Message<File>> messages) throws IOException {
+    	
+    	//Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+    	
     	long now = System.currentTimeMillis();
     	String destino = propertiesExterno.DIRECTORIO_DESTINO_DESCIFRADO_CONSOLIDADO+"\\compilado"+String.valueOf(now)+".txt";
         

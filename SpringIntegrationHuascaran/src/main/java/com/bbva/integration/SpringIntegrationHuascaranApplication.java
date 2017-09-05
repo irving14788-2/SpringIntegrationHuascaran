@@ -8,7 +8,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.support.SpringBootServletInitializer;
+//import org.springframework.boot.web.support.SpringBootServletInitializer;
+import org.springframework.boot.context.web.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
@@ -18,7 +19,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import com.bbva.integration.util.PropertiesExterno;
 
 @SpringBootApplication
-@ImportResource("classpath:/integration/integration2.xml")
+//@ImportResource(value = {"classpath:/integration/integration.xml","classpath:/integration/integration2.xml"})
+@ImportResource("classpath:/integration/integration.xml")
 public class SpringIntegrationHuascaranApplication extends SpringBootServletInitializer{
 
 	public static void main(String[] args) {
