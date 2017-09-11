@@ -207,31 +207,31 @@ public class FileHandlingService {
 		    }	
 	}
 
-private boolean validarMontosArchivoAC(String[] parts) throws NumberFormatException, IOException {
-		// TODO Auto-generated method stub
-	Double montoTotal=null;
-    Double montoSumaContratos=0.00;
-    String monto="";
-    int line=1;
-	for (String string : parts) {
-		if(line==1) {
-	  		  monto= string.substring(40,53)+"."+string.substring(53,55);
-	  		  montoTotal = Double.parseDouble(monto);
-	  	  }else if(string.length()>5){
-	  		  monto= string.substring(42,52)+"."+string.substring(52,54);
-	  		  montoSumaContratos = montoSumaContratos + Double.parseDouble(monto);
-	  	  }
-		line++;
-	}
-	    
-	    if(montoTotal.equals(montoSumaContratos)) {
-	    	return true;
-	    }else {
-	    	return false;
-	    }	
+	private boolean validarMontosArchivoAC(String[] parts) throws NumberFormatException, IOException {
+			// TODO Auto-generated method stub
+		Double montoTotal=null;
+	    Double montoSumaContratos=0.00;
+	    String monto="";
+	    int line=1;
+		for (String string : parts) {
+			if(line==1) {
+		  		  monto= string.substring(40,53)+"."+string.substring(53,55);
+		  		  montoTotal = Double.parseDouble(monto);
+		  	  }else if(string.length()>5){
+		  		  monto= string.substring(42,52)+"."+string.substring(52,54);
+		  		  montoSumaContratos = montoSumaContratos + Double.parseDouble(monto);
+		  	  }
+			line++;
+		}
+		    
+		    if(montoTotal.equals(montoSumaContratos)) {
+		    	return true;
+		    }else {
+		    	return false;
+		    }	
 	}
 
-public List<String> splitContratos(File file){
+	public List<String> splitContratos(File file){
 	   
 	   List<String> lista = new ArrayList<>();
 	   lista.add("A");
@@ -239,17 +239,17 @@ public List<String> splitContratos(File file){
 	   lista.add("C");
 	   
 	   return lista;
-   }
+	}
    
-   public String direccionarFileUnico(String obj){
+    public String direccionarFileUnico(String obj){
 	   //mover file unico
 	   
 	   //armar request
 	   return "OK";
-   }
+    }
    
    
-   public File cifrarContrato(File file) throws IOException {
+    public File cifrarContrato(File file) throws IOException {
 	   	String name = FilenameUtils.getBaseName(file.getName());
 	    File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE_PUBLICA);
 	    File fileCifrado = null;
@@ -260,7 +260,7 @@ public List<String> splitContratos(File file){
 			e.printStackTrace();
 		}
 		return fileCifrado;
-   }
+    }
    
 //   public static void main(String[] args) throws Exception {
 //	byte[] bytes = KeyBasedFileProcessor.decryptFile("D:\\directorios\\origenRDBCCF\\RDBCCF17041301.pgp",
