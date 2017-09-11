@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -159,28 +161,46 @@ public class FileHandlingService {
 	
    private boolean validarMontosArchivoRD(String[] parts) {
 		// TODO Auto-generated method stub
-        float montoTotal=0;
-	    float montoSumaContratos=0;
+        Double montoTotal=0.00;
+        BigDecimal montoAcumulado = new BigDecimal("0.00");
+        
+        Double montoSumaContratos=0.00;
+        BigDecimal montoSuma = new BigDecimal("0.00");
+        
 	    String monto="";
 	    String signo="";
 	    int line=1;
+	    
+	    
+	    
 		for (String string : parts) {
 			if(line==1) {
 		  		  monto= string.substring(48,61)+"."+string.substring(61,63);
-		  		  montoTotal = Float.parseFloat(monto);
+		  		  montoTotal = Double.parseDouble(monto);
+		  		  
+		  		  montoAcumulado = new BigDecimal(montoTotal);
+		  		  montoAcumulado = montoAcumulado.setScale(2, RoundingMode.HALF_UP);
+		  		  
 		  	  }else if(string.length()>5){
 		  		  monto= string.substring(115,125)+"."+string.substring(125,127);
 		  		  signo=string.substring(114,115);
 		  		  if(signo.equals("+")) {
-		  			montoSumaContratos = montoSumaContratos + Float.parseFloat(monto);
+		  			  
+		  			montoSumaContratos = montoSumaContratos + Double.parseDouble(monto);
+		  			montoSuma= new BigDecimal(montoSumaContratos);
+		  			montoSuma = montoSuma.setScale(2, RoundingMode.HALF_UP);
+		  			
 		  		  }else if (signo.equals("-")) {
-		  			montoSumaContratos = montoSumaContratos - Float.parseFloat(monto);
+		  			  
+		  			montoSumaContratos = montoSumaContratos - Double.parseDouble(monto);
+		  			montoSuma = new BigDecimal(montoSumaContratos);
+		  			montoSuma = montoSuma.setScale(2, RoundingMode.HALF_UP);
 		  		  }
 		  	  }
 			line++;
 		}
 		    
-		    if(montoTotal ==montoSumaContratos) {
+		    if(montoAcumulado.equals(montoSuma)) {
 		    	return true;
 		    }else {
 		    	return false;
