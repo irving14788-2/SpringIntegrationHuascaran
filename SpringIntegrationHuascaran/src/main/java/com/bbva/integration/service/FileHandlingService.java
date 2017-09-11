@@ -1,10 +1,14 @@
 package com.bbva.integration.service;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.bouncycastle.openpgp.PGPException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.integration.annotation.CorrelationStrategy;
@@ -40,6 +45,8 @@ import org.w3c.dom.NodeList;
 
 import com.bbva.integration.util.KeyBasedFileProcessor;
 import com.bbva.integration.util.PropertiesExterno;
+
+import ch.qos.logback.core.net.SyslogOutputStream;
 
 
 @Component
@@ -93,14 +100,14 @@ public class FileHandlingService {
     	return cantArchivos == waitingFileNumber;
     }
     
-    
-    public String aggregateFiles(List<Message<File>> messages) throws IOException {
+    @SuppressWarnings("resource")
+	public String aggregateFiles(List<Message<File>> messages) throws IOException {
     	
     	//Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-    	
+    	LOG.info("" +messages.size());
     	long now = System.currentTimeMillis();
     	String destino = propertiesExterno.DIRECTORIO_DESTINO_DESCIFRADO_CONSOLIDADO+"\\compilado"+String.valueOf(now)+".txt";
-        
+    	
     	Path folderDestino = Paths.get(destino);
         
         File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE_PRIVADA);
@@ -112,23 +119,99 @@ public class FileHandlingService {
 				System.out.println("message.getPayload().getPath() " + message.getPayload().getPath());
 				System.out.println("keyFileName.getAbsolutePath() " + keyFileName.getAbsolutePath());
 				
-				InputStream inputStream = KeyBasedFileProcessor.decryptFile(message.getPayload().getPath(),keyFileName.getAbsolutePath(),passwd.toCharArray());
-				
-				//validar arhivo descifrado
-				
-				String result = new BufferedReader(new InputStreamReader(inputStream)).lines().collect(Collectors.joining("\n"));				
-				lines.add(result);
+					byte[] decryptFile = KeyBasedFileProcessor.decryptFile(message.getPayload().getPath(),keyFileName.getAbsolutePath(),passwd.toCharArray());
+				String result="";
+				if(message.getPayload().getPath().contains("origenCFBCCF")) {
+					InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
+					result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
+					lines.add(result);
+				}else if(message.getPayload().getPath().contains("origenCRBCCF")) {
+					
+					InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
+					result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
+					lines.add(result);
+				}else if(message.getPayload().getPath().contains("origenACBCCF")) {//TODO parametrizar o properties caperta origen
+					InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
+					result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
+					//VALIDACION MONTOS
+					String[] parts =result.split("\n");
+					if(validarMontosArchivoAC(parts)) {
+						lines.add(result);
+					}
+				}
+				else if(message.getPayload().getPath().contains("origenRDBCCF")){//TODO parametrizar o properties caperta origen
+						InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
+						result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
+						String[] parts =result.split("\n");
+						if(validarMontosArchivoRD(parts)) {
+							lines.add(result); 
+						}
+				}
 			}
 			Files.write(folderDestino, lines, Charset.forName("UTF-8"));
 		
-		} catch (NoSuchProviderException e) {
+		} catch (Exception e) {
 			e.printStackTrace();			
 		}
 		return "OK";
 	}				
     
 	
-   public List<String> splitContratos(File file){
+   private boolean validarMontosArchivoRD(String[] parts) {
+		// TODO Auto-generated method stub
+        float montoTotal=0;
+	    float montoSumaContratos=0;
+	    String monto="";
+	    String signo="";
+	    int line=1;
+		for (String string : parts) {
+			if(line==1) {
+		  		  monto= string.substring(48,61)+"."+string.substring(61,63);
+		  		  montoTotal = Float.parseFloat(monto);
+		  	  }else if(string.length()>5){
+		  		  monto= string.substring(115,125)+"."+string.substring(125,127);
+		  		  signo=string.substring(114,115);
+		  		  if(signo.equals("+")) {
+		  			montoSumaContratos = montoSumaContratos + Float.parseFloat(monto);
+		  		  }else if (signo.equals("-")) {
+		  			montoSumaContratos = montoSumaContratos - Float.parseFloat(monto);
+		  		  }
+		  	  }
+			line++;
+		}
+		    
+		    if(montoTotal ==montoSumaContratos) {
+		    	return true;
+		    }else {
+		    	return false;
+		    }	
+	}
+
+private boolean validarMontosArchivoAC(String[] parts) throws NumberFormatException, IOException {
+		// TODO Auto-generated method stub
+	Double montoTotal=null;
+    Double montoSumaContratos=0.00;
+    String monto="";
+    int line=1;
+	for (String string : parts) {
+		if(line==1) {
+	  		  monto= string.substring(40,53)+"."+string.substring(53,55);
+	  		  montoTotal = Double.parseDouble(monto);
+	  	  }else if(string.length()>5){
+	  		  monto= string.substring(42,52)+"."+string.substring(52,54);
+	  		  montoSumaContratos = montoSumaContratos + Double.parseDouble(monto);
+	  	  }
+		line++;
+	}
+	    
+	    if(montoTotal.equals(montoSumaContratos)) {
+	    	return true;
+	    }else {
+	    	return false;
+	    }	
+	}
+
+public List<String> splitContratos(File file){
 	   
 	   List<String> lista = new ArrayList<>();
 	   lista.add("A");
@@ -159,5 +242,10 @@ public class FileHandlingService {
 		return fileCifrado;
    }
    
-	
+//   public static void main(String[] args) throws Exception {
+//	byte[] bytes = KeyBasedFileProcessor.decryptFile("D:\\directorios\\origenRDBCCF\\RDBCCF17041301.pgp",
+//			"D:\\directorios\\llave\\llave_privada_test_BBVACF.key", "P455w0rd".toCharArray());
+//	System.out.println(new String(bytes));
+//}
+//	
 }

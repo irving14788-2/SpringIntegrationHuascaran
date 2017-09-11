@@ -2,6 +2,7 @@ package com.bbva.integration.util;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,25 +25,27 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
 import org.bouncycastle.openpgp.PGPSecretKeyRingCollection;
 import org.bouncycastle.openpgp.PGPUtil;
+import org.bouncycastle.util.io.Streams;
 
 public class KeyBasedFileProcessor {
 	  
-	
-	  public static InputStream decryptFile(String inputFileName, String keyFileName, char[] passwd)
+	  public static byte[] decryptFile(String inputFileName, String keyFileName, char[] passwd)
 			    throws IOException, NoSuchProviderException
 			  {
 			    InputStream in = new BufferedInputStream(new FileInputStream(inputFileName));
 			    InputStream keyIn = new BufferedInputStream(new FileInputStream(keyFileName));
-			    InputStream out =  decryptFile(in, keyIn, passwd);
+			    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			    decryptFile(in, keyIn, passwd, baos);
+			    byte[] byteArray = baos.toByteArray();
 			    keyIn.close();
 			    in.close();
-			    return out;
+			    baos.close();
+			    return byteArray;
 			  }
 	  
-	  private static InputStream decryptFile(InputStream in, InputStream keyIn, char[] passwd)
+	  private static void decryptFile(InputStream in, InputStream keyIn, char[] passwd, OutputStream os)
 	    throws IOException, NoSuchProviderException
 	  {
-		InputStream rpta = null;
 	    in = PGPUtil.getDecoderStream(in);
 	    try
 	    {
@@ -55,7 +58,7 @@ public class KeyBasedFileProcessor {
 	      else {
 	        localPGPEncryptedDataList = (PGPEncryptedDataList)pgpF.nextObject();
 	      }
-	      Iterator localIterator = localPGPEncryptedDataList.getEncryptedDataObjects();
+	      Iterator<?> localIterator = localPGPEncryptedDataList.getEncryptedDataObjects();
 	      PGPPrivateKey localPGPPrivateKey = null;
 	      PGPPublicKeyEncryptedData localPGPPublicKeyEncryptedData = null;
 	      PGPSecretKeyRingCollection localPGPSecretKeyRingCollection = new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(keyIn));
@@ -82,10 +85,9 @@ public class KeyBasedFileProcessor {
 	        Object localObject3 = (PGPLiteralData)localObject2;
 
 	        InputStream localInputStream2 = ((PGPLiteralData)localObject3).getInputStream();
-	        //BufferedOutputStream localBufferedOutputStream = new BufferedOutputStream(stream);
-	        //Streams.pipeAll(localInputStream2, localBufferedOutputStream);
-	        //localBufferedOutputStream.close();
-	        rpta = localInputStream2;
+	        BufferedOutputStream localBufferedOutputStream = new BufferedOutputStream(os);
+	        Streams.pipeAll(localInputStream2, localBufferedOutputStream);
+	        localBufferedOutputStream.close();
 	      }
 	      else
 	      {
@@ -94,7 +96,6 @@ public class KeyBasedFileProcessor {
 	        }
 	        throw new PGPException("message is not a simple encrypted file - type unknown.");
 	      }
-	      Object localObject3;
 	      if (localPGPPublicKeyEncryptedData.isIntegrityProtected())
 	      {
 	        if (!localPGPPublicKeyEncryptedData.verify())
@@ -114,7 +115,6 @@ public class KeyBasedFileProcessor {
 	      if (localPGPException.getUnderlyingException() != null)
 	        localPGPException.getUnderlyingException().printStackTrace();
 	    }
-	    return rpta;
 	  }
 	  
 
