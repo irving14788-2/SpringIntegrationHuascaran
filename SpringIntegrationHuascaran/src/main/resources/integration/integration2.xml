@@ -13,7 +13,7 @@
 		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
 		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
 
-	<int:channel id="inputChannel" />
+	
 	
 	<int:channel id="primerChannel" />
 	<int:channel id="segundoChannel" />
@@ -21,24 +21,29 @@
 	<int:channel id="contratoFUChannel" />
 	<int:channel id="contratoMailChannel" />
 	<int:channel id="contratoMailChannelResponse" />
-	<int:channel id="outputChannel" />
+	
 	<int:channel id="cifradoChannel" />
 	
 	<int:channel id="channelAOBCCF" />
 	<int:channel id="channelCVBCCF" />
 	<int:channel id="channelFCBCCF" />
 	<int:channel id="channelLLCBCCF" />
- 	
-	<file:inbound-channel-adapter channel="inputChannel"
-		directory="${directorio.origen.host}" filename-pattern="*.txt">
+	
+	<file:inbound-channel-adapter channel="primerChannel"
+		directory="${directorio.origen.host}" filename-pattern="${entrada.archivo.Host.Reproceso}*.txt"
+		id="channelAdapterArchivosAltaReproceso">
 		<int:poller id="pollerXml" fixed-rate="5000">
 		</int:poller>
 	</file:inbound-channel-adapter>
 	
-	<int:recipient-list-router input-channel="inputChannel">
-		<int:recipient channel="primerChannel"/>
-		<int:recipient channel="segundoChannel"/>
-	</int:recipient-list-router>
+	<file:inbound-channel-adapter id="channelAdapterArchivosHost"
+    directory="${directorio.origen.host}" filename-pattern="${entrada.archivo.Host.ok}*.txt"
+    	channel="segundoChannel">
+    	<int:poller id="pollerXml" fixed-rate="5000">
+		</int:poller>
+    </file:inbound-channel-adapter>
+
+	
 	
 	<int:splitter id="splitter" ref="fileHandlingService"
 		method="splitContratos" input-channel="primerChannel" output-channel="contratoFUChannel" />
@@ -47,17 +52,18 @@
 		ref="fileHandlingService" method="direccionarFileUnico"
 		output-channel="contratoMailChannel" />
 
-	<int-http:outbound-gateway id="sendMail"
-		request-channel="contratoMailChannel" reply-channel="contratoMailChannelResponse"
-		url="http://localhost:9090/test"
-		http-method="POST" 
-		expected-response-type="java.lang.String" charset="UTF-8"/>
+	
 	
 	<int:aggregator input-channel="contratoMailChannelResponse" output-channel="nullChannel"/>
 	
 	<int:service-activator input-channel="segundoChannel"
 		ref="fileHandlingService" method="cifrarContrato"
 		output-channel="cifradoChannel" />
+		
+		<int:service-activator input-channel="contratoMailChannel" 
+		ref="fileHandlingService" method="contratoCorreo"
+		output-channel="contratoMailChannelResponse"
+		/>
 	
 	
 	<int:recipient-list-router input-channel="cifradoChannel">
@@ -78,6 +84,5 @@
     
     <file:outbound-channel-adapter id="filesOutLLCBCCF" channel="channelLLCBCCF"
     directory="${directorio.destino.telefonica.cifrado.LLCBCCF}" delete-source-files="true"/>
-
-	
+    
 </beans>

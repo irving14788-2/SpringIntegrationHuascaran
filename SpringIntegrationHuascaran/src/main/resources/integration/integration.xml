@@ -16,7 +16,7 @@
 	<file:inbound-channel-adapter id="channelAdapterACBCCF"
 		channel="requestACBCCFChannel" directory="${directorio.origen.telefonica.cifrados.ACBCCF}"
 		filename-pattern="${entrada.archivo.telefonica.ACBCCF}*.pgp">
-		<int:poller id="pollerPgp" fixed-rate="5000">
+		<int:poller id="pollerPgp" fixed-rate="5000"  > <!--cron="0 0/2,59 20 * * ?" -->
 		</int:poller>
 	</file:inbound-channel-adapter>
 
@@ -64,7 +64,7 @@
 	<file:inbound-channel-adapter id="channelAdapterRDBCCF"
 		channel="requestRDBCCFChannel" directory="${directorio.origen.telefonica.cifrados.RDBCCF}"
 		filename-pattern="${entrada.archivo.telefonica.RDBCCF}*.pgp">
-		<int:poller id="pollerPgp" fixed-rate="5000">
+		<int:poller id="pollerPgp" fixed-rate="10000">
 		</int:poller>
 	</file:inbound-channel-adapter>
 

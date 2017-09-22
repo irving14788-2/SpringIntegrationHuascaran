@@ -1,11 +1,22 @@
 package com.bbva.integration.util;
 
+import java.util.Properties;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.bbva.integration.DAO.LogDAO;
+
 @Component
-public class PropertiesExterno {
+public class PropertiesExterno extends Properties{
 	
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	@Value( "${spring.datasource.findim.url}" )
 	public String	URL_DATASOURCE_FINDIM;
 	
@@ -74,6 +85,9 @@ public class PropertiesExterno {
 	public String SALIDA_ARCHIVO_TELEFONICA_LLCBCCF;
 	//********************************************************
 
+	@Value( "${directorio.contratos.motor}" )
+	public String DIRECTORIO_MOTOR_CONTRATOS;
+	
 	@Value( "${directorio.contratos}" )
 	public String DIRECTORIO_CONTRATOS;
 	

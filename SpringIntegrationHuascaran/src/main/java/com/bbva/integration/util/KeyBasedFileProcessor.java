@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,18 +31,25 @@ import org.bouncycastle.util.io.Streams;
 public class KeyBasedFileProcessor {
 	  
 	  public static byte[] decryptFile(String inputFileName, String keyFileName, char[] passwd)
-			    throws IOException, NoSuchProviderException
+			    throws NoSuchProviderException
 			  {
-			    InputStream in = new BufferedInputStream(new FileInputStream(inputFileName));
-			    InputStream keyIn = new BufferedInputStream(new FileInputStream(keyFileName));
-			    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			    decryptFile(in, keyIn, passwd, baos);
-			    byte[] byteArray = baos.toByteArray();
-			    keyIn.close();
-			    in.close();
-			    baos.close();
+			    InputStream in;
+			    byte[] byteArray=null;
+					try {
+						in = new BufferedInputStream(new FileInputStream(inputFileName));
+					    InputStream keyIn = new BufferedInputStream(new FileInputStream(keyFileName));
+					    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					    decryptFile(in, keyIn, passwd, baos);
+					    byteArray = baos.toByteArray();
+					    keyIn.close();
+					    in.close();
+					    baos.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 			    return byteArray;
-			  }
+	   }
 	  
 	  private static void decryptFile(InputStream in, InputStream keyIn, char[] passwd, OutputStream os)
 	    throws IOException, NoSuchProviderException
@@ -53,61 +61,62 @@ public class KeyBasedFileProcessor {
 
 	      Object localObject1 = pgpF.nextObject();
 	      PGPEncryptedDataList localPGPEncryptedDataList;
-	      if ((localObject1 instanceof PGPEncryptedDataList))
-	        localPGPEncryptedDataList = (PGPEncryptedDataList)localObject1;
-	      else {
-	        localPGPEncryptedDataList = (PGPEncryptedDataList)pgpF.nextObject();
-	      }
-	      Iterator<?> localIterator = localPGPEncryptedDataList.getEncryptedDataObjects();
-	      PGPPrivateKey localPGPPrivateKey = null;
-	      PGPPublicKeyEncryptedData localPGPPublicKeyEncryptedData = null;
-	      PGPSecretKeyRingCollection localPGPSecretKeyRingCollection = new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(keyIn));
-	      while ((localPGPPrivateKey == null) && (localIterator.hasNext()))
-	      {
-	        localPGPPublicKeyEncryptedData = (PGPPublicKeyEncryptedData)localIterator.next();
-	        localPGPPrivateKey = Utils.findSecretKey(localPGPSecretKeyRingCollection, localPGPPublicKeyEncryptedData.getKeyID(), passwd);
-	      }
-	      if (localPGPPrivateKey == null) {
-	        throw new IllegalArgumentException("secret key for message not found.");
-	      }
-	      InputStream localInputStream1 = localPGPPublicKeyEncryptedData.getDataStream(localPGPPrivateKey, "BC");
-	      PGPObjectFactory localPGPObjectFactory2 = new PGPObjectFactory(localInputStream1);
-	      Object localObject2 = localPGPObjectFactory2.nextObject();
+	      if(localObject1!=null) {
+	    	  if ((localObject1 instanceof PGPEncryptedDataList))
+	  	        localPGPEncryptedDataList = (PGPEncryptedDataList)localObject1;
+	  	      else {
+	  	        localPGPEncryptedDataList = (PGPEncryptedDataList)pgpF.nextObject();
+	  	      }
+	    	  Iterator<?> localIterator = localPGPEncryptedDataList.getEncryptedDataObjects();
+		      PGPPrivateKey localPGPPrivateKey = null;
+		      PGPPublicKeyEncryptedData localPGPPublicKeyEncryptedData = null;
+		      PGPSecretKeyRingCollection localPGPSecretKeyRingCollection = new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(keyIn));
+		      while ((localPGPPrivateKey == null) && (localIterator.hasNext()))
+		      {
+		        localPGPPublicKeyEncryptedData = (PGPPublicKeyEncryptedData)localIterator.next();
+		        localPGPPrivateKey = Utils.findSecretKey(localPGPSecretKeyRingCollection, localPGPPublicKeyEncryptedData.getKeyID(), passwd);
+		      }
+		      if (localPGPPrivateKey == null) {
+		        throw new IllegalArgumentException("secret key for message not found.");
+		      }
+		      InputStream localInputStream1 = localPGPPublicKeyEncryptedData.getDataStream(localPGPPrivateKey, "BC");
+		      PGPObjectFactory localPGPObjectFactory2 = new PGPObjectFactory(localInputStream1);
+		      Object localObject2 = localPGPObjectFactory2.nextObject();
 
-	      if ((localObject2 instanceof PGPCompressedData))
-	      {
-	        Object localObject3 = (PGPCompressedData)localObject2;
-	        Object localObject4 = new PGPObjectFactory(((PGPCompressedData)localObject3).getDataStream());
-	        localObject2 = ((PGPObjectFactory)localObject4).nextObject();
-	      }
-	      if ((localObject2 instanceof PGPLiteralData))
-	      {
-	        Object localObject3 = (PGPLiteralData)localObject2;
+		      if ((localObject2 instanceof PGPCompressedData))
+		      {
+		        Object localObject3 = (PGPCompressedData)localObject2;
+		        Object localObject4 = new PGPObjectFactory(((PGPCompressedData)localObject3).getDataStream());
+		        localObject2 = ((PGPObjectFactory)localObject4).nextObject();
+		      }
+		      if ((localObject2 instanceof PGPLiteralData))
+		      {
+		        Object localObject3 = (PGPLiteralData)localObject2;
 
-	        InputStream localInputStream2 = ((PGPLiteralData)localObject3).getInputStream();
-	        BufferedOutputStream localBufferedOutputStream = new BufferedOutputStream(os);
-	        Streams.pipeAll(localInputStream2, localBufferedOutputStream);
-	        localBufferedOutputStream.close();
+		        InputStream localInputStream2 = ((PGPLiteralData)localObject3).getInputStream();
+		        BufferedOutputStream localBufferedOutputStream = new BufferedOutputStream(os);
+		        Streams.pipeAll(localInputStream2, localBufferedOutputStream);
+		        localBufferedOutputStream.close();
+		      }
+		      else
+		      {
+		        if ((localObject2 instanceof PGPOnePassSignatureList)) {
+		          throw new PGPException("encrypted message contains a signed message - not literal data.");
+		        }
+		        throw new PGPException("message is not a simple encrypted file - type unknown.");
+		      }
+		      if (localPGPPublicKeyEncryptedData.isIntegrityProtected())
+		      {
+		        if (!localPGPPublicKeyEncryptedData.verify())
+		          System.err.println("message failed integrity check");
+		        else {
+		          System.err.println("message integrity check passed");
+		        }
+		      }
+		      else {
+		        System.err.println("no message integrity check");
+		      }
 	      }
-	      else
-	      {
-	        if ((localObject2 instanceof PGPOnePassSignatureList)) {
-	          throw new PGPException("encrypted message contains a signed message - not literal data.");
-	        }
-	        throw new PGPException("message is not a simple encrypted file - type unknown.");
-	      }
-	      if (localPGPPublicKeyEncryptedData.isIntegrityProtected())
-	      {
-	        if (!localPGPPublicKeyEncryptedData.verify())
-	          System.err.println("message failed integrity check");
-	        else {
-	          System.err.println("message integrity check passed");
-	        }
-	      }
-	      else {
-	        System.err.println("no message integrity check");
-	      }
-	      
 	    }
 	    catch (PGPException localPGPException)
 	    {
