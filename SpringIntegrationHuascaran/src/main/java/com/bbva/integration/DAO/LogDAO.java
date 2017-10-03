@@ -13,6 +13,7 @@ public interface LogDAO {
 	void guardarLog(TfindimProcesoBatchLog tfindimProcesoBatchLog) throws DBException;
 	boolean validarInsertLog(String idFecha);
 	void actualizarLog(TfindimProcesoBatchLog tfindimProcesoBatchLog);
+	TfindimProcesoBatchLog obtenerProceso(String idProceso);
 	
 	void guardarDetalleLog(TfindimProcesoBatchLogDt tfindimProcesoBatchLogDt);
 	boolean validarInsertDetalleLog(String idFechaLog,String tarea);

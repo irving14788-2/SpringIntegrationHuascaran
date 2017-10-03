@@ -22,6 +22,8 @@
 	<int:channel id="contratoMailChannel" />
 	<int:channel id="contratoMailChannelResponse" />
 	
+	<int:channel id="notificacionChannel" />
+	
 	<int:channel id="cifradoChannel" />
 	
 	<int:channel id="channelAOBCCF" />
@@ -51,19 +53,27 @@
 	<int:service-activator input-channel="contratoFUChannel"
 		ref="fileHandlingService" method="direccionarFileUnico"
 		output-channel="contratoMailChannel" />
+	
+	<int:service-activator input-channel="contratoMailChannel" 
+		ref="fileHandlingService" method="contratoCorreo"
+		output-channel="contratoMailChannelResponse"/>
 
 	
+	<int:service-activator input-channel="notificacionChannel"
+	 ref="fileHandlingService" method="finFlujoCorreoFUnico"
+	 output-channel="nullChannel" />
 	
-	<int:aggregator input-channel="contratoMailChannelResponse" output-channel="nullChannel"/>
 	
+	
+	<int:aggregator input-channel="contratoMailChannelResponse"
+		output-channel="notificacionChannel">
+	</int:aggregator>
+
 	<int:service-activator input-channel="segundoChannel"
 		ref="fileHandlingService" method="cifrarContrato"
 		output-channel="cifradoChannel" />
 		
-		<int:service-activator input-channel="contratoMailChannel" 
-		ref="fileHandlingService" method="contratoCorreo"
-		output-channel="contratoMailChannelResponse"
-		/>
+		
 	
 	
 	<int:recipient-list-router input-channel="cifradoChannel">

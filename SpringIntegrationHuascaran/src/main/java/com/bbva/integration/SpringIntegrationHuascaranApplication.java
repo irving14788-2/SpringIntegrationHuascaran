@@ -20,7 +20,7 @@ import com.bbva.integration.util.PropertiesExterno;
 
 @SpringBootApplication
 //@ImportResource(value = {"classpath:/integration/integration.xml","classpath:/integration/integration2.xml"})
-@ImportResource("classpath:/integration/integration.xml")
+@ImportResource("classpath:/integration/integration2.xml")
 public class SpringIntegrationHuascaranApplication extends SpringBootServletInitializer{
 
 	public static void main(String[] args) {

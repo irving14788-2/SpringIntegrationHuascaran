@@ -3,6 +3,7 @@ package com.bbva.integration.DAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.bbva.integration.bean.TfindimProcesoBatchLog;
 import com.bbva.integration.bean.TfindimProcesoBatchLogDt;
@@ -39,15 +40,15 @@ public class LogDAOImpl implements LogDAO {
 	
 	@SuppressWarnings("unchecked")
 	@Override
+	@Transactional
 	public void guardarLog(TfindimProcesoBatchLog tfindimProcesoBatchLog)  throws DBException  {
-		String query = "INSERT INTO TFINDIM_PROCESO_BATCH_LOG (ID_PROCESO,CD_PROCESO,ST_PROCESO,OB_PROCESO,FH_INI_PROCESO,FH_FIN_PROCESO)"
-				+ " VALUES (:idProceso,:cdProceso,:stProceso,:obProceso,:fhIniProceso,:fhFinProceso)";
+		String query = "INSERT INTO TFINDIM_PROCESO_BATCH_LOG (CD_PROCESO,ST_PROCESO,OB_PROCESO,FH_INI_PROCESO,FH_FIN_PROCESO)"
+				+ " VALUES (:cdProceso,:stProceso,:obProceso,:fhIniProceso,:fhFinProceso)";
 //		logger.info(metodo + " " + idTransaccion + " query " + query);
 //		logger.info(metodo + " " + idTransaccion + " " + descripcionError);
 		try{
 		@SuppressWarnings("rawtypes")
 		Map parameters = new HashMap();
-		parameters.put("idProceso", tfindimProcesoBatchLog.getIdProceso());
 		parameters.put("cdProceso", tfindimProcesoBatchLog.getCdProceso());
 		parameters.put("stProceso", tfindimProcesoBatchLog.getStProceso());
 		parameters.put("obProceso", tfindimProcesoBatchLog.getObProceso());
@@ -58,7 +59,8 @@ public class LogDAOImpl implements LogDAO {
 		namedParameterJdbcTemplate.update(query,parameters);
 		
 		}catch(RuntimeException e){
-			throw new DBException(e.getMessage());
+//			throw new DBException(e.getMessage());
+			System.out.println("ya existe");
 		}
 	}
 
@@ -77,6 +79,7 @@ public class LogDAOImpl implements LogDAO {
 
 	@SuppressWarnings("unchecked")
 	@Override
+	@Transactional
 	public void guardarDetalleLog(TfindimProcesoBatchLogDt tfindimProcesoBatchLogDt) {
 		// TODO Auto-generated method stub
 		String query = "INSERT INTO TFINDIM_PROCESO_BATCH_LOG_DT(TAREA,PASO,ID_PROCESO,NOMBRE_ARCHIVO,OBS_ESTADO)"
@@ -180,6 +183,37 @@ public class LogDAOImpl implements LogDAO {
 			logger.error(e.getMessage(), e);
 		}	
 		return tfindimProcesoSubTarea;
+	}
+
+
+	@Override
+	public TfindimProcesoBatchLog obtenerProceso(String cdProceso) {
+		// TODO Auto-generated method stub
+		TfindimProcesoBatchLog tfindimProcesoBatchLog=null;
+		try{
+			tfindimProcesoBatchLog = jdbcFINDIM.queryForObject(
+				"select id_proceso,cd_proceso,st_proceso,ob_proceso,id_tp_proceso,fh_ini_proceso,fh_fin_proceso"
+				+ " from TFINDIM_PROCESO_BATCH_LOG WHERE cd_proceso= ? ",
+			    new RowMapper<TfindimProcesoBatchLog>() {
+					public TfindimProcesoBatchLog mapRow(ResultSet rs, int rowNum) throws SQLException {
+						TfindimProcesoBatchLog beanProcesoBatch= new TfindimProcesoBatchLog();
+						beanProcesoBatch.setIdProceso(rs.getBigDecimal("id_proceso"));
+						beanProcesoBatch.setCdProceso(rs.getString("cd_proceso"));
+						beanProcesoBatch.setStProceso(rs.getString("st_proceso"));
+						
+						beanProcesoBatch.setObProceso(rs.getString("ob_proceso"));
+						beanProcesoBatch.setIdTpProceso(rs.getString("id_tp_proceso"));
+						beanProcesoBatch.setFhIniProceso(rs.getDate("fh_ini_proceso"));
+						beanProcesoBatch.setFhFinProceso(rs.getDate("fh_fin_proceso"));
+						return beanProcesoBatch;
+					}
+				},
+			    cdProceso
+			);
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}	
+		return tfindimProcesoBatchLog;
 	}
 
 }

@@ -66,9 +66,8 @@ public class FileHandlingService {
     }
 
 	
-	public File formatoCorreo(String lineaArchivo,List<String> nombreArchivos) throws IOException {
-		String archivoCrear=propertiesExterno.DIRECTORIO_CONTRATOS+"\\nombreArchivoEnvioMotor.txt";
-		File fichero = new File(archivoCrear);
+	public void formatoCorreo(String lineaArchivo,List<String> nombreArchivos) throws IOException {
+		String archivoCrear=propertiesExterno.DIRECTORIO_MOTOR_CONTRATOS+"\\nombreArchivoEnvioMotor.txt";
     	String[] partes = lineaArchivo.split(Pattern.quote("|"));
 		BufferedWriter bw = new BufferedWriter(new FileWriter(archivoCrear));
 		
@@ -105,15 +104,14 @@ public class FileHandlingService {
 		 bw.write("<M>"+hourdateFormat.format(calendar.getTime())+"\n");   
 		 bw.close();
 		
-		 return fichero;
 	}
-    @ReleaseStrategy
+   
+	@ReleaseStrategy
     public boolean release(List<Message<File>> messages) throws DBException {
     		Calendar fechaDia = Calendar.getInstance();
         	String cd_proceso=""+fechaDia.get(Calendar.YEAR)+(fechaDia.get(Calendar.MONTH) + 1)+fechaDia.get(Calendar.DATE);
         	if(logDAO.validarInsertLog(cd_proceso)) {
         		TfindimProcesoBatchLog batchLog = new TfindimProcesoBatchLog();
-            	batchLog.setIdProceso(new BigDecimal(1));
             	batchLog.setCdProceso(cd_proceso);
             	batchLog.setIdTpProceso("TELEF");//TODO obten"+"\n");de properties
             	batchLog.setStProceso("EN PROCESO");//TODO obtener de properties
@@ -134,11 +132,11 @@ public class FileHandlingService {
             	directory = propertiesExterno.DIRECTORIO_ORIGEN_TELEFONICA_CIFRADOS_RDBCCF;
             }
             
-        	boolean b = validarCantidadArchivos(directory,messages.size());
+        	boolean b = validarCantidadArchivos(directory,messages.size(),name);
         	return b;
     }
     
-    public boolean validarCantidadArchivos(String directorio, int cantArchivos) {
+    public boolean validarCantidadArchivos(String directorio, int cantArchivos,String nombreArchivoIn) {
     	int waitingFileNumber = 0;        
         long now = System.currentTimeMillis();
         long nowMinusMinutes = now - TimeUnit.MINUTES.toMillis(propertiesExterno.LEER_INTERVLO_MINUTOS);
@@ -151,38 +149,68 @@ public class FileHandlingService {
 						return false;
 					}
 				});
-                
+        
+        
         waitingFileNumber = (folderOrigen!=null)?folderOrigen.length:0;
-        if(cantArchivos == waitingFileNumber) {
+        int validador=0;
+        
+        for (File file2 : folderOrigen) {
+        	if(file2.getPath().substring(file2.getPath().lastIndexOf('\\')+1).contains(nombreArchivoIn.substring(0,6))) {
+        		validador++;
+        	}
+        }
+        if(cantArchivos == validador) {
         	TfindimProcesoTarea tarea =logDAO.obtenerDatosTarea("TAR001");//guardar en properties
-        	for (File file2 : folderOrigen) {
-//        		por cada archivo que lea hace un insert: en detalle
-        		String nombreArchivo = file2.getPath().substring(file2.getPath().lastIndexOf('\\')+1);
-        		insertarDetalleLog(tarea,nombreArchivo,"Archivo encontrado: "+nombreArchivo,"20001"/* obtener de properties */);
-    		}
+        	 for (File file2 : folderOrigen) {
+             	if(file2.getPath().substring(file2.getPath().lastIndexOf('\\')+1).contains(nombreArchivoIn.substring(0,6))) {
+             		String nombreArchivo = file2.getPath().substring(file2.getPath().lastIndexOf('\\')+1);
+             		insertarDetalleLog(tarea,nombreArchivo,"Archivo encontrado: "+nombreArchivo,"20001"/* obtener de properties */);
+             	}
+             }
+        	
         	return true;
         }else {
         	return false;
         }
     	
     }
+    
     public void insertarDetalleLog(TfindimProcesoTarea tarea,String nombreArchivo,String obs,String subtarea) {//id incremental
-		TfindimProcesoBatchLogDt tfindimProcesoBatchLogDt = new TfindimProcesoBatchLogDt();
-		tfindimProcesoBatchLogDt.setIdProceso("1");//obtener EL DE LA FECHA
+    	Calendar fechaDia = Calendar.getInstance();
+    	String cd_proceso=""+fechaDia.get(Calendar.YEAR)+(fechaDia.get(Calendar.MONTH) + 1)+fechaDia.get(Calendar.DATE);
+    	TfindimProcesoBatchLog batch = logDAO.obtenerProceso(cd_proceso);
+    	
+    	TfindimProcesoBatchLogDt tfindimProcesoBatchLogDt = new TfindimProcesoBatchLogDt();
+		tfindimProcesoBatchLogDt.setIdProceso(batch.getIdProceso().toString());//obtener EL DE LA FECHA
 		tfindimProcesoBatchLogDt.setTarea(tarea.getIdTarea().toString());
 		tfindimProcesoBatchLogDt.setPaso(subtarea);
 		tfindimProcesoBatchLogDt.setNombreArchivo(nombreArchivo);//TODO obtener simbolo de properties '\' o '//'
 		tfindimProcesoBatchLogDt.setObsEstado(obs);
 		logDAO.guardarDetalleLog(tfindimProcesoBatchLogDt);
     }
+    
+    
+    public String finFlujoCorreoFUnico(String asd) {
+	    TfindimProcesoTarea tarea = logDAO.obtenerDatosTarea("TAR002");
+		   insertarDetalleLog(tarea, "-", "Se movieron los archivos a File unico", "30002");
+		   insertarDetalleLog(tarea, "-", "Se movieron los archivos a la ruta del servidor de correos", "30003");
+		   
+    	return "ok";
+    }
+    
+    public String agregatorFlujo2(List<Message<File>> messages) {
+    	LOG.info("" +messages.size());
+    	return "OK";
+    }
     @SuppressWarnings("resource")
 	public String aggregateFiles(List<Message<File>> messages) throws IOException {
     	//Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
     	LOG.info("" +messages.size());
     	long now = System.currentTimeMillis();
-    	String destino = propertiesExterno.DIRECTORIO_DESTINO_DESCIFRADO_CONSOLIDADO+"\\compilado"+String.valueOf(now)+".txt";
+    	String nombreArchivoDestino="compilado"+String.valueOf(now)+".txt";
+    	String destino = propertiesExterno.DIRECTORIO_DESTINO_DESCIFRADO_CONSOLIDADO+"\\";
     	
-    	Path folderDestino = Paths.get(destino);
+    	Path folderDestino = Paths.get(destino+nombreArchivoDestino);
         
         File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE_PRIVADA);
         String passwd = propertiesExterno.PASSWORD_LLAVE;
@@ -201,7 +229,7 @@ public class FileHandlingService {
 					//error al desencriptar el archivo
 					insertarDetalleLog(tarea,nombreArchivo,"Error Al desencriptar el archivo: "+nombreArchivo,"20002");
 				}else {
-					if(message.getPayload().getPath().contains("origenCFBCCF")) {
+					if(message.getPayload().getPath().contains("CFBCCF")) {//cambiar por nombre de archivo
 						
 						InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
 						result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
@@ -210,7 +238,7 @@ public class FileHandlingService {
 						
 						
 						
-					}else if(message.getPayload().getPath().contains("origenCRBCCF")) {
+					}else if(message.getPayload().getPath().contains("CRBCCF")) {
 						
 						InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
 						result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
@@ -218,7 +246,7 @@ public class FileHandlingService {
 						lines.add(result);
 						
 						
-					}else if(message.getPayload().getPath().contains("origenACBCCF")) {//TODO parametrizar o properties caperta origen
+					}else if(message.getPayload().getPath().contains("ACBCCF")) {//TODO parametrizar o properties caperta origen
 						
 						InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
 						result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
@@ -233,7 +261,7 @@ public class FileHandlingService {
 						}
 						
 					}
-					else if(message.getPayload().getPath().contains("origenRDBCCF")){//TODO parametrizar o properties caperta origen
+					else if(message.getPayload().getPath().contains("RDBCCF")){//TODO parametrizar o properties caperta origen
 							
 						InputStreamReader isr = new InputStreamReader(new ByteArrayInputStream(decryptFile),"utf8");
 							result = new BufferedReader(isr).lines().collect(Collectors.joining("\n"));
@@ -250,7 +278,7 @@ public class FileHandlingService {
 					}
 					
 					Files.write(folderDestino, lines, Charset.forName("UTF-8"));
-					insertarDetalleLog(tarea,nombreArchivo,"Archivo AGREGADO : "+nombreArchivo,"20004");
+					insertarDetalleLog(tarea,nombreArchivo,"Archivo AGREGADO : "+nombreArchivoDestino,"20004");
 				}
 				
 			}
@@ -311,7 +339,8 @@ public class FileHandlingService {
 		    }	
 	}
 
-	private boolean validarMontosArchivoAC(String[] parts) throws NumberFormatException, IOException {
+   
+   private boolean validarMontosArchivoAC(String[] parts) throws NumberFormatException, IOException {
 			// TODO Auto-generated method stub
 		Double montoTotal=null;
 		BigDecimal montoAcumulado = new BigDecimal("0.00");
@@ -353,17 +382,22 @@ public class FileHandlingService {
 		    }	
 	}
 
+	
 	public List<String> splitContratos(File file){
 		List<String> lista = new ArrayList<>();
 		try {
 		      FileReader fr = new FileReader(file);
 		      BufferedReader br = new BufferedReader(fr);
-		 
+		      int numContratos=0;
 		      String linea;
 		      while((linea = br.readLine()) != null) {
 		    		  lista.add(linea);
+		    		  numContratos++;
 		      }
 		      fr.close();
+		      TfindimProcesoTarea tarea = logDAO.obtenerDatosTarea("TAR002");
+		      insertarDetalleLog(tarea, file.getName(), "El archivo contiene "+numContratos+ " registros", "30001");
+		      
 		    }
 		    catch(Exception e) {
 		      System.out.println("Excepcion leyendo fichero "+ file + ": " + e);
@@ -375,25 +409,29 @@ public class FileHandlingService {
 	   //mover file unico
 	   if(obj!=null) {
 		   System.out.println("");
-		   
+//		   TfindimProcesoTarea tarea = logDAO.obtenerDatosTarea("TAR002");
 		   List<File> archivos = obtenerArchivosPorContrato(obj.substring(2,20));
+//		   insertarDetalleLog(tarea, "-", "Se encontraron "+archivos.size()+" archivos.", "30001");
 		   moverFileUnico(archivos);
+//		   insertarDetalleLog(tarea, "-", "Se trasfirieron los archivos a File Unico", "30002");
 	   }
-	   //armar request
 	   return obj;
     }
     
-    public void contratoCorreo(String lineaArchivo) throws IOException {
+    public String contratoCorreo(String lineaArchivo) throws IOException {
+//    	TfindimProcesoTarea tarea = logDAO.obtenerDatosTarea("TAR003");
     	String[] partesLinea = lineaArchivo.split(Pattern.quote("|"));
     	List<File> archivosPdfContrato = obtenerArchivosPorContrato(partesLinea[1]);
+//    	insertarDetalleLog(tarea, "-", "Se encontraron "+archivosPdfContrato.size()+" archivos.", "40001");
     	List<String> nombreArchivos = new ArrayList<>();
     	for (File file : archivosPdfContrato) {
     		nombreArchivos.add(file.getName());
 		}
-    	File archivoCorreo = formatoCorreo(lineaArchivo, nombreArchivos);
-    	archivosPdfContrato.add(archivoCorreo);
+//    	archivosPdfContrato.add(archivoCorreo);
     	moverArchivosCarpetaMotorCorreos(archivosPdfContrato);
+    	formatoCorreo(lineaArchivo, nombreArchivos);
     	
+    	return lineaArchivo;
     }
    
    
@@ -402,12 +440,12 @@ public class FileHandlingService {
 	private void moverArchivosCarpetaMotorCorreos(List<File> archivosPdfContrato) throws IOException {
 		// TODO Auto-generated method stub
 		String sDirectorioContratos = propertiesExterno.DIRECTORIO_CONTRATOS;
-    	String sDirectorioFileUnico = propertiesExterno.DIRECTORIO_MOTOR_CONTRATOS;
+    	String sDirectorioMotorContrtatos = propertiesExterno.DIRECTORIO_MOTOR_CONTRATOS;
     	
     	for (File file : archivosPdfContrato) {
 			
     		String origen = sDirectorioContratos+"\\"+ file.getName();
-    		String destino = sDirectorioFileUnico+"\\"+file.getName();
+    		String destino = sDirectorioMotorContrtatos+"\\"+file.getName();
 
             Path FROM = Paths.get(origen);
             Path TO = Paths.get(destino);
@@ -466,15 +504,21 @@ public class FileHandlingService {
 	}
 
 	public File cifrarContrato(File file) throws IOException {
+		TfindimProcesoTarea tarea = logDAO.obtenerDatosTarea("TAR003");
+	      
+		insertarDetalleLog(tarea, file.getName(), "archivo encontrado: "+ file.getName(), "40001");  
 	   	String name = FilenameUtils.getBaseName(file.getName());
 	    File keyFileName = new File(propertiesExterno.DIRECTORIO_LLAVE_PUBLICA);
 	    File fileCifrado = null;
 	    try {
-			KeyBasedFileProcessor.encryptFile(file.getAbsolutePath(), propertiesExterno.DIRECTORIO_TEMP_CIFRADO+name+".pgp", keyFileName.getAbsolutePath());
-			fileCifrado = new File(propertiesExterno.DIRECTORIO_TEMP_CIFRADO+name+".pgp");
+			KeyBasedFileProcessor.encryptFile(file.getAbsolutePath(), propertiesExterno.DIRECTORIO_TEMP_CIFRADO+"AOBCCF"+name+".pgp", keyFileName.getAbsolutePath());
+			fileCifrado = new File(propertiesExterno.DIRECTORIO_TEMP_CIFRADO+"AOBCCF"+name+".pgp");
+			insertarDetalleLog(tarea, fileCifrado.getName(), "archivo cifrado: "+fileCifrado.getName(), "40002");
 		} catch (NoSuchProviderException | PGPException e) {
 			e.printStackTrace();
 		}
+	    
+	    insertarDetalleLog(tarea, fileCifrado.getName(), "archivo transferido cifrado: "+fileCifrado.getName(), "40003");
 		return fileCifrado;
     }
    
